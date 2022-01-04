@@ -55,7 +55,18 @@ func TestFormatURL(t *testing.T) {
 	t.Parallel()
 	c := weather.NewClient("dummyAPIKey")
 	location := "Paris,FR"
-	want := "https://api.openweathermap.org/data/2.5/weather?q=Paris,FR&appid=dummyAPIKey"
+	want := "https://api.openweathermap.org/data/2.5/weather?q=Paris%2CFR&appid=dummyAPIKey"
+	got := c.FormatURL(location)
+	if !cmp.Equal(want, got) {
+		t.Error(cmp.Diff(want, got))
+	}
+}
+
+func TestFormatURLSpaces(t *testing.T) {
+	t.Parallel()
+	c := weather.NewClient("dummyAPIKey")
+	location := "Wagga Wagga,AU"
+	want := "https://api.openweathermap.org/data/2.5/weather?q=Wagga+Wagga%2CAU&appid=dummyAPIKey"
 	got := c.FormatURL(location)
 	if !cmp.Equal(want, got) {
 		t.Error(cmp.Diff(want, got))
