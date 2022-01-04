@@ -96,7 +96,7 @@ func TestGetWeather(t *testing.T) {
 	c.BaseURL = ts.URL
 	c.HTTPClient = ts.Client()
 	want := weather.Conditions{
-		Summary: "Clouds",
+		Summary:     "Clouds",
 		Temperature: 281.33,
 	}
 	got, err := c.GetWeather("Paris,FR")
