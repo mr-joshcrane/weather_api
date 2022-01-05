@@ -12,6 +12,10 @@ import (
 
 type Temperature float64
 
+func (t Temperature) Celcius() float64 {
+	return float64(t) - 273.15
+}
+
 type Conditions struct {
 	Summary     string
 	Temperature Temperature
@@ -32,6 +36,45 @@ type Client struct {
 	HTTPClient *http.Client
 }
 
+func NewClient(key string) *Client {
+	return &Client{
+		APIKey:  key,
+		BaseURL: "https://api.openweathermap.org",
+		HTTPClient: &http.Client{
+			Timeout: 10 * time.Second,
+		},
+	}
+}
+
+func (c Client) FormatURL(location string) string {
+	location = url.QueryEscape(location)
+	return fmt.Sprintf("%s/data/2.5/weather?q=%s&appid=%s", c.BaseURL, location, c.APIKey)
+}
+
+func (c *Client) GetWeather(location string) (Conditions, error) {
+	URL := c.FormatURL(location)
+	resp, err := c.HTTPClient.Get(URL)
+	if err != nil {
+		return Conditions{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return Conditions{}, fmt.Errorf("could not find location: %s ", location)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return Conditions{}, fmt.Errorf("unexpected response status %q", resp.Status)
+	}
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return Conditions{}, err
+	}
+	conditions, err := ParseResponse(data)
+	if err != nil {
+		return Conditions{}, err
+	}
+	return conditions, nil
+}
+
 func ParseResponse(data []byte) (Conditions, error) {
 	var resp OWMResponse
 	err := json.Unmarshal(data, &resp)
@@ -50,39 +93,6 @@ func ParseResponse(data []byte) (Conditions, error) {
 
 func FormatURL(baseURL, location, key string) string {
 	return fmt.Sprintf("%s/data/2.5/weather?q=%s&appid=%s", baseURL, location, key)
-}
-
-func NewClient(key string) *Client {
-	return &Client{
-		APIKey:  key,
-		BaseURL: "https://api.openweathermap.org",
-		HTTPClient: &http.Client{
-			Timeout: 10 * time.Second,
-		},
-	}
-}
-
-func (c *Client) FormatURL(location string) string {
-	location = url.QueryEscape(location)
-	return fmt.Sprintf("%s/data/2.5/weather?q=%s&appid=%s", c.BaseURL, location, c.APIKey)
-}
-
-func (c *Client) GetWeather(location string) (Conditions, error) {
-	URL := c.FormatURL(location)
-	resp, err := c.HTTPClient.Get(URL)
-	if err != nil {
-		return Conditions{}, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return Conditions{}, fmt.Errorf("unexpected response status %q", resp.Status)
-	}
-	data, err := io.ReadAll(resp.Body)
-	conditions, err := ParseResponse(data)
-	if err != nil {
-		return Conditions{}, err
-	}
-	return conditions, nil
 }
 
 func Get(location, key string) (Conditions, error) {
@@ -111,8 +121,4 @@ func RunCLI() {
 		os.Exit(1)
 	}
 	fmt.Printf("%s %.1fº\n", conditions.Summary, conditions.Temperature.Celcius())
-}
-
-func (t Temperature) Celcius() float64 {
-	return float64(t) - 273.15
 }
