@@ -129,9 +129,12 @@ func RunCLI() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	temp := conditions.Temperature.Celcius()
+	tempSymbol := "C"
 	if *isFahrenheit {
-		fmt.Printf("%s %.1fºF\n", conditions.Summary, conditions.Temperature.Fahrenheit())
-	} else {
-		fmt.Printf("%s %.1fºC\n", conditions.Summary, conditions.Temperature.Celcius())
+		temp = conditions.Temperature.Fahrenheit()
+		tempSymbol = "F"
 	}
+	
+	fmt.Printf("%s %.1fº%s\n", conditions.Summary, temp, tempSymbol)
 }
