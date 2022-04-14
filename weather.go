@@ -2,6 +2,7 @@ package weather
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,6 +15,10 @@ type Temperature float64
 
 func (t Temperature) Celcius() float64 {
 	return float64(t) - 273.15
+}
+
+func (t Temperature) Fahrenheit() float64 {
+	return 1.8*float64(t-273.15) + 32
 }
 
 type Conditions struct {
@@ -105,11 +110,15 @@ func Get(location, key string) (Conditions, error) {
 }
 
 func RunCLI() {
-	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %s LOCATION\n\nExample: %[1]s London,UK", os.Args[0])
+	fset := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+	isFahrenheit := fset.Bool("f", false, "display temperature in Fahrenheit instead of Celcius")
+	err := fset.Parse(os.Args[1:])
+	args := fset.Args()
+	if len(args) < 1 {
+		fmt.Fprintf(os.Stderr, "Usage: %s LOCATION\n\nExample: %[1]s London,UK\n", os.Args[0])
 		os.Exit(1)
 	}
-	location := os.Args[1]
+	location := args[0]
 	key := os.Getenv("OPENWEATHERMAP_API_KEY")
 	if key == "" {
 		fmt.Fprintln(os.Stderr, "Please set the environment variable OPENWEATHERMAP_API_KEY")
@@ -120,5 +129,12 @@ func RunCLI() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	fmt.Printf("%s %.1fº\n", conditions.Summary, conditions.Temperature.Celcius())
+	temp := conditions.Temperature.Celcius()
+	tempSymbol := "C"
+	if *isFahrenheit {
+		temp = conditions.Temperature.Fahrenheit()
+		tempSymbol = "F"
+	}
+	
+	fmt.Printf("%s %.1fº%s\n", conditions.Summary, temp, tempSymbol)
 }
